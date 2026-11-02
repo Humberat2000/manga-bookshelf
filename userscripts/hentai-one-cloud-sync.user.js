@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Hentai-One Cloud Favorites Sync
 // @namespace    https://github.com/Humberat2000/manga-bookshelf
-// @version      1.0.0
+// @version      1.1.0
 // @description  Sync Hentai-One favorites with the manga-bookshelf Supabase account.
 // @match        https://ch.hentai-one.com/*
 // @run-at       document-idle
@@ -47,6 +47,12 @@
     localStorage.setItem(STATE_KEY, message);
     const el = document.getElementById('ho-cloud-sync-status');
     if (el) el.textContent = message;
+    const dock = document.getElementById('ho-cloud-sync-dock');
+    if (dock) {
+      dock.title = message;
+      dock.style.borderColor = message.startsWith('同步失败') ? '#e05b5b' : '#777';
+      dock.style.color = message.startsWith('同步失败') ? '#ff7777' : '#fff';
+    }
   }
 
   async function request(path, options = {}, token = null) {
@@ -184,11 +190,24 @@
 
   function makePanel() {
     if (document.getElementById('ho-cloud-sync-panel')) return;
+
+    const dock = document.createElement('button');
+    dock.id = 'ho-cloud-sync-dock';
+    dock.type = 'button';
+    dock.textContent = '☁';
+    dock.title = localStorage.getItem(STATE_KEY) || '云端收藏同步';
+    dock.setAttribute('aria-label', '打开云端收藏同步面板');
+    dock.style.cssText = 'position:fixed;z-index:2147483647;right:12px;bottom:16px;width:36px;height:36px;border:1px solid #777;border-radius:50%;background:#171717;color:#fff;font:20px/1 sans-serif;box-shadow:0 2px 10px #0006;cursor:pointer;opacity:.72';
+    document.body.appendChild(dock);
+
     const panel = document.createElement('div');
     panel.id = 'ho-cloud-sync-panel';
-    panel.style.cssText = 'position:fixed;z-index:2147483647;right:12px;bottom:16px;width:260px;padding:12px;background:#171717;color:#fff;border:1px solid #555;border-radius:10px;font:13px/1.5 sans-serif;box-shadow:0 3px 18px #0008';
+    panel.style.cssText = 'display:none;position:fixed;z-index:2147483647;right:12px;bottom:60px;width:260px;padding:12px;background:#171717;color:#fff;border:1px solid #555;border-radius:10px;font:13px/1.5 sans-serif;box-shadow:0 3px 18px #0008';
     panel.innerHTML = `
-      <div style="font-weight:700;margin-bottom:7px">云端收藏同步</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;font-weight:700;margin-bottom:7px">
+        <span>云端收藏同步</span>
+        <button id="ho-cloud-sync-close" aria-label="收起面板" style="padding:2px 7px;font-size:16px">×</button>
+      </div>
       <div id="ho-cloud-sync-status" style="margin-bottom:8px;color:#b8e0ff">正在检查登录状态…</div>
       <div id="ho-cloud-sync-login">
         <input id="ho-cloud-sync-email" type="email" placeholder="书架账号邮箱" autocomplete="username" style="box-sizing:border-box;width:100%;padding:7px;margin:3px 0;color:#111">
@@ -199,8 +218,12 @@
         <button id="ho-cloud-sync-now" style="flex:1;padding:6px">立即同步</button>
         <button id="ho-cloud-sync-logout" style="padding:6px">退出</button>
       </div>
-      <div style="font-size:11px;color:#aaa;margin-top:7px">首次同步会先备份本机收藏，再合并云端与本地数据。</div>`;
+      <div style="font-size:11px;color:#aaa;margin-top:7px">同步在后台自动运行；首次同步会备份并合并本机与云端收藏。</div>`;
     document.body.appendChild(panel);
+
+    const closePanel = () => { panel.style.display = 'none'; dock.style.display = 'block'; };
+    dock.onclick = () => { panel.style.display = 'block'; dock.style.display = 'none'; };
+    document.getElementById('ho-cloud-sync-close').onclick = closePanel;
 
     const loginBox = document.getElementById('ho-cloud-sync-login');
     const updateLoginVisibility = () => { loginBox.style.display = session ? 'none' : 'block'; };
